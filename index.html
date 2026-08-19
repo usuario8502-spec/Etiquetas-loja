@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Etiquetas Web</title>
     <link rel="icon" type="image/png" href="./favicon.png?v=2">
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Bibliotecas externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
@@ -35,7 +33,6 @@
 
 <body class="bg-gray-900 text-gray-100 font-sans overflow-x-hidden">
 
-    <!-- TELA DE LOGIN -->
     <div id="modalLogin" class="fixed inset-0 bg-gray-950 z-[9999] flex items-center justify-center p-4">
         <div class="bg-gray-800 p-8 rounded-2xl border border-gray-700 w-full max-w-sm shadow-2xl">
             <div class="text-center mb-8">
@@ -71,6 +68,254 @@
 
     <aside id="drawerMenuLateral"
         class="fixed top-0 left-0 h-full w-80 bg-gray-800 border-r border-gray-700 shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col p-6">
+        
+        <div class="flex items-center justify-between border-b border-gray-700 pb-4 mb-6">
+            <div class="flex items-center gap-2.5 text-green-400 font-semibold truncate">
+                <i class="fas fa-user-circle text-2xl"></i>
+                <span id="lblNomeUsuarioMenu" class="text-base truncate">Carregando...</span>
+            </div>
+            <button onclick="window.fecharMenuLateral()" class="text-gray-400 hover:text-white text-xl p-1 transition">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <label id="btnImportar"
+                class="admin-only w-full text-left bg-gray-700/50 hover:bg-gray-700 text-white px-4 py-3 rounded-lg flex items-center gap-3 transition font-medium text-sm cursor-pointer">
+                <i class="fas fa-file-excel text-green-400 w-5 text-center"></i> Importar Banco (.xlsx)
+                <input type="file" id="inputPlanilha" accept=".xlsx" class="hidden"
+                    onchange="window.processarPlanilha(event); window.fecharMenuLateral();">
+            </label>
+
+            <button onclick="window.abrirHistorico(); window.fecharMenuLateral();"
+                class="w-full text-left bg-gray-700/50 hover:bg-gray-700 text-white px-4 py-3 rounded-lg flex items-center gap-3 transition font-medium text-sm">
+                <i class="fas fa-history text-blue-400 w-5 text-center"></i> Histórico
+            </button>
+
+            <button id="btnAdminCadastro" onclick="window.abrirModal('modalCadastroUsuario'); window.fecharMenuLateral();"
+                class="admin-only w-full text-left bg-gray-700/50 hover:bg-gray-700 text-white px-4 py-3 rounded-lg flex items-center gap-3 transition font-medium text-sm">
+                <i class="fas fa-user-plus text-purple-400 w-5 text-center"></i> Novo Usuário
+            </button>
+
+            <hr id="linhaAdmin" class="admin-only border-gray-700 my-2">
+
+            <button id="btnLimparBanco" onclick="window.limparBancoDeDadosCompletoAdmin(); window.fecharMenuLateral();"
+                class="admin-only w-full text-left bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-800/50 px-4 py-3 rounded-lg flex items-center gap-3 transition font-medium text-sm">
+                <i class="fas fa-database text-red-400 w-5 text-center"></i> Limpar Banco de Dados
+            </button>
+        </div>
+
+        <div class="border-t border-gray-700 pt-4 mt-auto">
+            <button onclick="window.fazerLogout()"
+                class="w-full text-left bg-gray-900 hover:bg-red-900/40 text-red-400 border border-red-900/30 px-4 py-3 rounded-lg flex items-center gap-3 transition font-semibold text-sm">
+                <i class="fas fa-sign-out-alt w-5 text-center"></i> Sair do Sistema
+            </button>
+        </div>
+    </aside>
+
+    <div id="mainDashboard" class="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
+        <header class="relative flex justify-center items-center mb-6 border-b border-gray-800 pb-4">
+            <button onclick="window.abrirMenuLateral()"
+                class="absolute left-0 p-2 text-gray-300 hover:text-white focus:outline-none text-2xl transition"
+                title="Abrir Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="text-2xl md:text-3xl font-bold text-green-500 tracking-wide text-center">Gestão de Etiquetas</h1>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-10 gap-6">
+            <div class="lg:col-span-7 flex flex-col gap-4 h-[850px]">
+                <div>
+                    <input type="text" id="inputBusca" oninput="window.filtrarProdutos()"
+                        placeholder="Buscar Item por Nome, Código de barras, Referência ou GEMCO..."
+                        class="w-full p-3.5 rounded-lg bg-gray-800 border border-gray-700 focus:border-green-500 focus:outline-none shadow-inner text-base text-white">
+                </div>
+
+                <div class="flex flex-wrap gap-3 items-center flex-shrink-0">
+                    <button onclick="window.abrirModalCadastroProduto()"
+                        class="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition text-sm shadow-sm">
+                        <i class="fas fa-plus"></i> Cadastrar Produto
+                    </button>
+
+                    <button onclick="window.limparSelecoesComConfirmacao()"
+                        class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition text-sm shadow-sm">
+                        <i class="fas fa-eraser"></i> Limpar Itens Selecionados
+                    </button>
+                </div>
+
+                <main class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col">
+                    <div class="p-4 border-b border-gray-700 bg-gray-850 flex justify-between items-center text-sm text-gray-400 flex-shrink-0">
+                        <span id="lblTituloCatalogo">Catálogo de Produtos</span>
+                        <span id="contadorItens">Carregando itens...</span>
+                    </div>
+                    <ul id="listaProdutos" class="divide-y divide-gray-700 flex-1 overflow-y-auto custom-scrollbar"></ul>
+                </main>
+            </div>
+
+            <div class="lg:col-span-3 bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col shadow-lg h-[850px] sticky top-4">
+                <div class="border-b border-gray-700 pb-3 mb-3 flex-shrink-0">
+                    <h2 class="font-bold text-white text-sm flex items-center gap-2">
+                        <i class="fas fa-tags text-green-400"></i> Itens Selecionados
+                    </h2>
+                </div>
+
+                <div id="listaSelecionadosPainel" class="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+                    <div class="text-center text-gray-500 text-xs py-8">Nenhuma etiqueta selecionada.</div>
+                </div>
+
+                <div class="border-t border-gray-700 pt-3 mt-3 flex-shrink-0">
+                    <div class="text-xs text-gray-400 mb-2 text-center">
+                        Total: <span id="txtTotalSelecionadoRodape" class="font-bold text-green-400">0</span> etiquetas
+                    </div>
+                    <button onclick="window.gerarPDFEtiquetas()"
+                        class="w-full bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition text-sm">
+                        <i class="fas fa-print"></i> Gerar PDF 🚀
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCadastroProduto" class="fixed inset-0 bg-black/70 popup-blur hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md shadow-2xl">
+            <h3 id="tituloModalProduto" class="text-xl font-bold mb-4 text-white flex items-center gap-2"><i class="fas fa-tag text-green-500"></i> Cadastrar Nova Etiqueta</h3>
+            <form id="formCadastroProduto" class="space-y-4" onsubmit="window.salvarProduto(event)">
+                <input type="hidden" id="pIdKey">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Nome do Produto</label>
+                    <input type="text" id="pNome" required class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-green-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Código GEMCO</label>
+                    <input type="text" id="pGemco" required class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-green-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Referência</label>
+                    <input type="text" id="pReferencia" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-green-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Código de Barras</label>
+                    <input type="text" id="pBarras" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-green-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="window.fecharModal('modalCadastroProduto')" class="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 transition">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition text-white">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalQuantidade" class="fixed inset-0 bg-black/70 popup-blur hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-sm shadow-2xl">
+            <h3 class="text-lg font-bold mb-1 text-white">Definir Quantidade</h3>
+            <p id="lblProdutoQtd" class="text-xs text-gray-400 uppercase tracking-wider mb-4 truncate"></p>
+            <div class="mb-4">
+                <input type="number" id="inputQtdValor" min="0" class="w-full p-3 rounded-lg text-center bg-gray-700 border border-gray-600 text-xl font-bold text-white focus:outline-none focus:border-green-500">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="window.fecharModal('modalQuantidade')" class="px-4 py-2 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700 text-sm transition">Cancelar</button>
+                <button onclick="window.confirmarQuantidade()" class="px-5 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition text-white">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCadastroUsuario" class="fixed inset-0 bg-black/70 popup-blur hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-white flex items-center gap-2"><i class="fas fa-user-plus text-purple-500"></i> Criar Conta do Sistema</h3>
+            <form id="formCadastroUsuario" class="space-y-3" onsubmit="window.salvarNovoUsuario(event)">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">E-mail (para fins de autenticação)</label>
+                    <input type="email" id="uEmail" required class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Usuário (Username de Login)</label>
+                    <input type="text" id="uUsername" required class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Senha Provisória</label>
+                    <input type="password" id="uSenha" required class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Perfil de Acesso</label>
+                    <select id="uPerfil" class="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white">
+                        <option value="executor">Executor</option>
+                        <option value="administrador" selected>Administrador</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="window.fecharModal('modalCadastroUsuario')" class="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 text-sm hover:bg-gray-700">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium text-white">Cadastrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalHistorico" class="fixed inset-0 bg-black/70 popup-blur hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
+            <h3 class="text-xl font-bold mb-4 text-white flex items-center gap-2"><i class="fas fa-history text-blue-500"></i> Histórico</h3>
+            <div class="overflow-y-auto flex-1 border border-gray-700 rounded-lg bg-gray-850 custom-scrollbar">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-900 border-b border-gray-700 text-gray-400 uppercase text-xs">
+                            <th class="p-3">Usuário</th>
+                            <th class="p-3">Data/Hora</th>
+                            <th class="p-3">Etiquetas</th>
+                            <th class="p-3 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaHistoricoCorpo" class="divide-y divide-gray-700"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button onclick="window.fecharModal('modalHistorico')" class="px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition text-white">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, remove, update, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCeqM0xnEn5Qm3z7GwxRoEEiTxdZkRW_1E",
+          authDomain: "etiquetas-loja-2f590.firebaseapp.com",
+          databaseURL: "https://etiquetas-loja-2f590-default-rtdb.firebaseio.com",
+          projectId: "etiquetas-loja-2f590",
+          storageBucket: "etiquetas-loja-2f590.firebasestorage.app",
+          messagingSenderId: "699786863257",
+          appId: "1:699786863257:web:1cf452f00ab9448778ce08"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let todosProdutos = [];
+        let carrinhoSelecionados = {};
+        let dadosUsuarioLogado = { username: "Administrador", perfil: "executor" };
+        let produtoAlvoQuantidade = null;
+
+        window.toggleMostrarSenha = function() {
+            const inputSenha = document.getElementById('loginSenha');
+            const icone = document.getElementById('iconeOlho');
+            if (inputSenha.type === 'password') {
+                inputSenha.type = 'text';
+                icone.classList.remove('fa-eye');
+                icone.classList.add('fa-eye-slash');
+            } else {
+                inputSenha.type = 'password';
+                icone.classList.remove('fa-eye-slash');
+                icone.classList.add('fa-eye');
+            }
+        };
+
+        function verificarEConfigurarAdminAutomatico() {
+            get(ref(db, 'usuarios_sistema')).then((snapshot) => {
+                if (!snapshot.exists()) {
+                    const adminPadrao = {
+                        username: "admin",
+                      class="fixed top-0 left-0 h-full w-80 bg-gray-800 border-r border-gray-700 shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col p-6">
         
         <div class="flex items-center justify-between border-b border-gray-700 pb-4 mb-6">
             <div class="flex items-center gap-2.5 text-green-400 font-semibold truncate">
