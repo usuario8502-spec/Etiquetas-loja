@@ -583,10 +583,12 @@ const alcanceDecodificado = XLSX.utils.decode_range(alcanceCélulas);
 const totalDeLinhas = alcanceDecodificado.e.r + 1;
 
 const catalogoRef = ref(db, 'catalogo_etiquetas');
-for (let i = 2; i <= totalDeLinhas; i++) {
-const celulaGemco = primeiraAba[B${i}]; const celulaEan = primeiraAba[C${i}];
-const celulaNome = primeiraAba[D${i}]; const celulaRef = primeiraAba[E${i}];
-if (!celulaGemco || !celulaGemco.v) continue;
+    for (let i = 2; i <= totalDeLinhas; i++) {
+        const celulaGemco = primeiraAba[`B${i}`];
+        const celulaEan = primeiraAba[`C${i}`];
+        const celulaNome = primeiraAba[`D${i}`];
+        const celulaRef = primeiraAba[`E${i}`];
+        if (!celulaGemco || !celulaGemco.v) continue;
 
 const itemMapeado = {
 gemco: String(celulaGemco.v).trim(),
