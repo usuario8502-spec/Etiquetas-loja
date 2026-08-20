@@ -327,6 +327,13 @@
         let dadosUsuarioLogado = { username: "Administrador", perfil: "executor" };
         let produtoAlvoQuantidade = null;
 
+        // Suporte à tecla Enter no input de quantidade
+        document.getElementById("inputQtdValor").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                window.confirmarQuantidade();
+            }
+        });
+
         window.toggleMostrarSenha = function() {
             const inputSenha = document.getElementById('loginSenha');
             const icone = document.getElementById('iconeOlho');
@@ -685,15 +692,26 @@
         };
 
         window.removerItemPainel = function(gemco) {
-            delete carrinhoSelecionados[gemco];
-            window.filtrarProdutos();
+            const prod = todosProdutos.find(p => p.gemco === gemco);
+            const nomeProd = prod ? prod.nome : "este item";
+            
+            if (confirm(`Deseja realmente remover "${nomeProd.toUpperCase()}" dos selecionados?`)) {
+                delete carrinhoSelecionados[gemco];
+                window.filtrarProdutos();
+            }
         };
 
         function dispararPopupQuantidade(produto) {
             produtoAlvoQuantidade = produto;
             document.getElementById("lblProdutoQtd").innerText = produto.nome;
-            document.getElementById("inputQtdValor").value = carrinhoSelecionados[produto.gemco] || 1;
+            const inputQtd = document.getElementById("inputQtdValor");
+            inputQtd.value = carrinhoSelecionados[produto.gemco] || 1;
             window.abrirModal('modalQuantidade');
+            
+            setTimeout(() => {
+                inputQtd.focus();
+                inputQtd.select();
+            }, 50);
         }
 
         window.confirmarQuantidade = function() {
