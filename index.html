@@ -296,7 +296,7 @@
     <!-- SCRIPT PRINCIPAL DO FIREBASE E PWA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, get, remove, update, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         // Registro do Service Worker Externo (PWA)
@@ -321,6 +321,26 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
+
+        // --- SEGURANÇA: PERSISTÊNCIA E TIMER DE INATIVIDADE ---
+        setPersistence(auth, browserSessionPersistence).catch(err => console.error("Erro persistência:", err));
+
+        let timerInatividade;
+        const LIMITE_INATIVIDADE = 8 * 60 * 1000; // 8 minutos
+
+        function resetarTimerInatividade() {
+            clearTimeout(timerInatividade);
+            if (auth.currentUser) {
+                timerInatividade = setTimeout(() => {
+                    alert("Sessão encerrada por inatividade.");
+                    signOut(auth).then(() => window.location.reload());
+                }, LIMITE_INATIVIDADE);
+            }
+        }
+
+        ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach(event => {
+            document.addEventListener(event, resetarTimerInatividade);
+        });
 
         let todosProdutos = [];
         let carrinhoSelecionados = {};
@@ -389,7 +409,9 @@
                     return;
                 }
 
-                signInWithEmailAndPassword(auth, emailEncontrado, senha).catch(err => {
+                signInWithEmailAndPassword(auth, emailEncontrado, senha).then(() => {
+                    resetarTimerInatividade();
+                }).catch(err => {
                     alert("Erro ao entrar: " + err.message);
                     btn.innerText = "Entrar";
                     btn.disabled = false;
@@ -468,6 +490,7 @@
                 document.getElementById('modalLogin').classList.add('hidden');
                 verificarAcessoPorEmail(user.email);
                 carregarBancoDadosCompleto();
+                resetarTimerInatividade();
             } else {
                 document.getElementById('modalLogin').classList.remove('hidden');
             }
@@ -870,35 +893,73 @@
                 produtosDoLote.push({ gemco: gemcoKey, qtd: carrinhoSelecionados[gemcoKey] });
             });
 
+            const user = auth.currentUser;
             const dadosHistorico = {
                 operador: dadosUsuarioLogado.username,
                 data: new Date().toLocaleString("pt-BR"),
+                timestamp: Date.now(), // Necessário para o timer de 48h
                 total: filaImpressao.length,
                 itens: produtosDoLote
             };
 
-            push(ref(db, 'historico_etiquetas'), dadosHistorico);
+            // Salva no histórico segregado por UID do usuário
+            push(ref(db, 'historico_etiquetas/' + (user ? user.uid : 'geral')), dadosHistorico);
             window.open(doc.output('bloburl'), '_blank');
         };
 
         window.abrirHistorico = function() {
-            onValue(ref(db, 'historico_etiquetas'), (snapshot) => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            // Se for administrador, busca todos os históricos. Se for comum, busca apenas o seu próprio.
+            const refBusca = dadosUsuarioLogado.perfil === 'administrador' 
+                ? ref(db, 'historico_etiquetas') 
+                : ref(db, 'historico_etiquetas/' + user.uid);
+
+            onValue(refBusca, (snapshot) => {
                 const corpo = document.getElementById("tabelaHistoricoCorpo");
                 corpo.innerHTML = "";
+                const agora = Date.now();
+                const quarentaOitoHoras = 48 * 60 * 60 * 1000;
+
                 if (snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const idLote = child.key;
-                        const h = child.val();
-                        const dadosStringificados = encodeURIComponent(JSON.stringify(h.itens || []));
+                    let registros = [];
+                    if (dadosUsuarioLogado.perfil === 'administrador') {
+                        snapshot.forEach(userSnapshot => {
+                            const uidUser = userSnapshot.key;
+                            userSnapshot.forEach(itemSnapshot => {
+                                registros.push({ uid: uidUser, id: itemSnapshot.key, dados: itemSnapshot.val() });
+                            });
+                        });
+                    } else {
+                        snapshot.forEach(itemSnapshot => {
+                            registros.push({ uid: user.uid, id: itemSnapshot.key, dados: itemSnapshot.val() });
+                        });
+                    }
+
+                    if (registros.length === 0) {
+                        corpo.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                        window.abrirModal('modalHistorico');
+                        return;
+                    }
+
+                    registros.forEach(reg => {
+                        // AUTO-EXCLUSÃO DE 48H
+                        if (agora - (reg.dados.timestamp || 0) > quarentaOitoHoras) {
+                            remove(ref(db, 'historico_etiquetas/' + reg.uid + '/' + reg.id));
+                            return;
+                        }
+
+                        const dadosStringificados = encodeURIComponent(JSON.stringify(reg.dados.itens || []));
                         const tr = document.createElement("tr");
                         tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
                         tr.innerHTML = `
-                            <td class="p-3 font-semibold text-green-400">@${h.operador}</td>
-                            <td class="p-3 text-xs text-gray-400">${h.data}</td>
-                            <td class="p-3"><span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900">${h.total} itens</span></td>
+                            <td class="p-3 font-semibold text-green-400">@${reg.dados.operador || 'Usuário'}</td>
+                            <td class="p-3 text-xs text-gray-400">${reg.dados.data}</td>
+                            <td class="p-3"><span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900">${reg.dados.total} itens</span></td>
                             <td class="p-3 text-right flex items-center justify-end gap-3">
                                 <button onclick="window.reimprimirLoteHistorico('${dadosStringificados}')" class="text-green-400 hover:text-green-300 font-medium text-xs"><i class="fas fa-print"></i> Imprimir</button>
-                                ${dadosUsuarioLogado.perfil === 'administrador' ? `<button onclick="window.excluirRegistroHistorico('${idLote}')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1"><i class="fas fa-trash-alt"></i></button>` : ''}
+                                <button onclick="window.excluirRegistroHistorico('${reg.uid}', '${reg.id}')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1" title="Excluir"><i class="fas fa-trash-alt"></i></button>
                             </td>`;
                         corpo.insertBefore(tr, corpo.firstChild);
                     });
@@ -959,9 +1020,10 @@
             } catch (err) { alert("Erro ao processar reimpressão: " + err.message); }
         };
 
-        window.excluirRegistroHistorico = function(idLote) {
+        window.excluirRegistroHistorico = function(uid, idLote) {
             if (confirm("Excluir este registro do histórico?")) {
-                remove(ref(db, 'historico_etiquetas/' + idLote));
+                remove(ref(db, 'historico_etiquetas/' + uid + '/' + idLote))
+                    .catch(err => alert("Erro ao excluir: " + err.message));
             }
         };
     </script>
