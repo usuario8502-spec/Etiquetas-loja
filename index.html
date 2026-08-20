@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Etiquetas">
+    <link rel="manifest" href="./manifest.json">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -136,7 +137,7 @@
             <h1 class="text-2xl md:text-3xl font-bold text-green-500 tracking-wide text-center">Gestão de Etiquetas</h1>
         </header>
 
-        <!-- Grade ajustada de lg para md para ativar o layout lado a lado mais cedo (ao diminuir o zoom) -->
+        <!-- Grade ajustada para ativar o layout lado a lado mais cedo via md: -->
         <div class="grid grid-cols-1 md:grid-cols-10 gap-6">
             <!-- COLUNA ESQUERDA -->
             <div class="md:col-span-7 flex flex-col gap-4 h-[850px]">
@@ -298,41 +299,14 @@
         import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, get, remove, update, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Injeção Dinâmica do PWA (Manifest e Service Worker) para funcionar com arquivo único no GitHub
-        (function() {
-            const manifestData = {
-                "name": "Gestão de Etiquetas Web",
-                "short_name": "Etiquetas",
-                "start_url": "./",
-                "display": "standalone",
-                "background_color": "#111827",
-                "theme_color": "#16a34a",
-                "icons": [
-                    { "src": "./favicon.png", "sizes": "192x192", "type": "image/png" },
-                    { "src": "./favicon.png", "sizes": "512x512", "type": "image/png" }
-                ]
-            };
-            const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-            const manifestLink = document.createElement('link');
-            manifestLink.rel = 'manifest';
-            manifestLink.href = URL.createObjectURL(manifestBlob);
-            document.head.appendChild(manifestLink);
-
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    const swCode = `
-                        self.addEventListener('install', (e) => self.skipWaiting());
-                        self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-                        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-                    `;
-                    const swBlob = new Blob([swCode], { type: 'text/javascript' });
-                    const swUrl = URL.createObjectURL(swBlob);
-                    navigator.serviceWorker.register(swUrl)
-                        .then(reg => console.log('Service Worker PWA registrado com sucesso:', reg.scope))
-                        .catch(err => console.log('Falha ao registrar Service Worker:', err));
-                });
-            }
-        })();
+        // Registro do Service Worker Externo (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
+                    .catch(err => console.log('Falha ao registrar Service Worker:', err));
+            });
+        }
 
         const firebaseConfig = {
           apiKey: "AIzaSyCeqM0xnEn5Qm3z7GwxRoEEiTxdZkRW_1E",
