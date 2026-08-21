@@ -1,14 +1,3 @@
-Você tem 3 novas mensagens.
-
-Pular para o conteúdo
-Como usar o E-mail de Magazine Luiza com leitores de tela
-
-Conversas
- 
-Regulamentos do programa
-Powered by Google
-Última atividade da conta: há 4 minutos
-Detalhes
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -148,7 +137,7 @@ title="Abrir Menu">
 <h1 class="text-2xl md:text-3xl font-bold text-green-500 tracking-wide text-center">Gestão de Etiquetas</h1>
 </header>
 
-<!-- Grade ajustada para ativar o layout lado a lado mais cedo via md: -->
+<!-- Grade ajustada para layout lado a lado -->
 <div class="grid grid-cols-1 md:grid-cols-10 gap-6">
 <!-- COLUNA ESQUERDA -->
 <div class="md:col-span-7 flex flex-col gap-4 h-[850px]">
@@ -304,7 +293,7 @@ class="w-full bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-3 rou
 </div>
 </div>
 
-<!-- SCRIPT PRINCIPAL DO FIREBASE E PWA -->
+<!-- SCRIPT PRINCIPAL DO FIREBASE E PWA. ATENÇÃO: type="module" é obrigatório! -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -335,6 +324,7 @@ const db = getDatabase(app);
 
 let todosProdutos = [];
 let carrinhoSelecionados = {};
+let ordemSelecao = [];
 let dadosUsuarioLogado = { username: "Administrador", perfil: "executor" };
 let produtoAlvoQuantidade = null;
 
@@ -579,6 +569,7 @@ window.limparBancoDeDadosCompletoAdmin = function() {
 if (confirm("🚨 ATENÇÃO CRÍTICA: Deseja redefinir completamente o catálogo de etiquetas?")) {
 remove(ref(db, 'catalogo_etiquetas')).then(() => {
 carrinhoSelecionados = {};
+ordemSelecao = [];
 alert("Catálogo limpo.");
 carregarBancoDadosCompleto();
 }).catch(err => alert("Erro: " + err.message));
@@ -641,7 +632,7 @@ leitor.readAsArrayBuffer(arquivo);
 function renderizarListaProdutos(lista) {
 const ul = document.getElementById("listaProdutos");
 ul.innerHTML = "";
-document.getElementById("contadorItens").innerText = ${todosProdutos.length} cadastrados`;
+document.getElementById("contadorItens").innerText = todosProdutos.length + " cadastrados";
 const limiteVisual = lista.slice(0, 50);
 
 limiteVisual.forEach(prod => {
@@ -649,11 +640,11 @@ const totalQtd = carrinhoSelecionados[prod.gemco] || 0;
 const selecionado = totalQtd > 0;
 const li = document.createElement("li");
 
-li.className = p-4 flex justify-between items-center cursor-pointer select-none transition${
-selecionado
-? 'bg-green-950/80 border-l-4 border-green-500 text-white shadow-md'
-: 'hover:bg-gray-700/50'
-}`;
+let classeLi = 'p-4 flex justify-between items-center cursor-pointer select-none transition hover:bg-gray-700/50';
+if (selecionado) {
+classeLi = 'p-4 flex justify-between items-center cursor-pointer select-none transition bg-green-950/80 border-l-4 border-green-500 text-white shadow-md';
+}
+li.className = classeLi;
 
 li.addEventListener("click", () => window.alternarSelecaoItem(prod.gemco, 1));
 li.addEventListener("dblclick", (e) => {
@@ -661,48 +652,70 @@ e.stopPropagation();
 dispararPopupQuantidade(prod);
 });
 
+let txtEan = prod.codigoBarras || 'Sem Barras';
+let txtRef = prod.referencia || 'Sem Referência';
+
+let htmlBadge = "";
+let isChecked = "";
+let htmlCorTexto = "text-gray-400";
+
+if (selecionado) {
+htmlBadge = '<span class="bg-green-700 text-white font-bold px-2.5 py-1 rounded text-xs shadow">🔖 ' + totalQtd + 'x</span>';
+isChecked = "checked";
+htmlCorTexto = "text-green-200";
+}
+
+let htmlAcoes = "";
+if (dadosUsuarioLogado.perfil === 'administrador') {
+htmlAcoes = '<button onclick="window.abrirEditarProduto('' + prod.id + '')" class="text-gray-400 hover:text-blue-400 p-1 transition ml-1" title="Editar"><i class="fas fa-edit"></i></button>' +
+'<button onclick="window.excluirProdutoDireto('' + prod.id + '', '' + prod.nome + '')" class="text-gray-400 hover:text-red-400 p-1 transition ml-1" title="Excluir"><i class="fas fa-trash-alt"></i></button>';
+}
+
 li.innerHTML = &lt;div class="flex-1 min-w-0 pr-4"&gt; &lt;div class="font-bold text-base truncate"&gt;${prod.nome.toUpperCase()}</div>
-<div class="text-xs ${selecionado ? 'text-green-200' : 'text-gray-400'} mt-1 font-mono"&gt; GEMCO: &lt;span class="font-semibold"&gt;${prod.gemco}</span> | EAN: <span class="font-semibold">${prod.codigoBarras || 'Sem Barras'}&lt;/span&gt; | REF: &lt;span class="font-semibold"&gt;${prod.referencia}</span>
+<div class="text-xs ${htmlCorTexto} mt-1 font-mono"&gt; GEMCO: &lt;span class="font-semibold"&gt;${prod.gemco}</span> | EAN: <span class="font-semibold">${txtEan}&lt;/span&gt; | REF: &lt;span class="font-semibold"&gt;${txtRef}</span>
 </div>
 </div>
 <div class="flex items-center gap-3" onclick="event.stopPropagation();">
-${selecionado ?<span class="bg-green-700 text-white font-bold px-2.5 py-1 rounded text-xs shadow">🔖 latex
-{totalQtd}x&lt;/span>` : ''} &lt;input type="checkbox" 
-
-{selecionado ? 'checked' : ''} onchange="window.alternarSelecaoItemManual('{dadosUsuarioLogado.perfil === 'administrador' ? &lt;button onclick="window.abrirEditarProduto('${prod.id}')" class="text-gray-400 hover:text-blue-400 p-1 transition ml-1" title="Editar"><i class="fas fa-edit"></i></button>
-<button onclick="window.excluirProdutoDireto('${prod.id}', '${prod.nome}')" class="text-gray-400 hover:text-red-400 p-1 transition ml-1" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-: ''} &lt;/div&gt;;
+${htmlBadge} &lt;input type="checkbox" ${isChecked} onchange="window.alternarSelecaoItemManual('${prod.gemco}', this.checked)"&gt; ${htmlAcoes}
+</div>
+`;
 ul.appendChild(li);
 });
 atualizarPainelLateralSelecionados();
 }
 
 window.excluirProdutoDireto = function(id, nome) {
-if (confirm(Excluir permanentemente "${nome.toUpperCase()}"?`)) {
+if (confirm("Excluir permanentemente o produto: " + nome.toUpperCase() + "?")) {
 remove(ref(db, 'catalogo_etiquetas/' + id)).then(() => carregarBancoDadosCompleto());
 }
 };
 
 window.alternarSelecaoItem = function(gemco, padraoQtd) {
-if (carrinhoSelecionados[gemco] > 0) delete carrinhoSelecionados[gemco];
-else carrinhoSelecionados[gemco] = padraoQtd;
+if (carrinhoSelecionados[gemco] > 0) {
+delete carrinhoSelecionados[gemco];
+ordemSelecao = ordemSelecao.filter(item => item !== gemco);
+} else {
+carrinhoSelecionados[gemco] = padraoQtd;
+ordemSelecao.unshift(gemco);
+}
 window.filtrarProdutos();
 };
 
 window.alternarSelecaoItemManual = function(gemco, checado) {
-if (checado) carrinhoSelecionados[gemco] = 1;
-else delete carrinhoSelecionados[gemco];
+if (checado) {
+carrinhoSelecionados[gemco] = 1;
+if (!ordemSelecao.includes(gemco)) ordemSelecao.unshift(gemco);
+} else {
+delete carrinhoSelecionados[gemco];
+ordemSelecao = ordemSelecao.filter(item => item !== gemco);
+}
 window.filtrarProdutos();
 };
 
 window.removerItemPainel = function(gemco) {
-const prod = todosProdutos.find(p => p.gemco === gemco);
-const nomeProd = prod ? prod.nome : "este item";
-
-if (confirm(Deseja realmente remover "${nomeProd.toUpperCase()}" dos selecionados?`)) {
 delete carrinhoSelecionados[gemco];
+ordemSelecao = ordemSelecao.filter(item => item !== gemco);
 window.filtrarProdutos();
-}
 };
 
 function dispararPopupQuantidade(produto) {
@@ -720,19 +733,27 @@ inputQtd.select();
 
 window.confirmarQuantidade = function() {
 const valor = parseInt(document.getElementById("inputQtdValor").value) || 0;
-if (valor > 0 && produtoAlvoQuantidade) carrinhoSelecionados[produtoAlvoQuantidade.gemco] = valor;
-else if (produtoAlvoQuantidade) delete carrinhoSelecionados[produtoAlvoQuantidade.gemco];
+if (valor > 0 && produtoAlvoQuantidade) {
+if (!carrinhoSelecionados[produtoAlvoQuantidade.gemco]) {
+ordemSelecao.unshift(produtoAlvoQuantidade.gemco);
+}
+carrinhoSelecionados[produtoAlvoQuantidade.gemco] = valor;
+} else if (produtoAlvoQuantidade) {
+delete carrinhoSelecionados[produtoAlvoQuantidade.gemco];
+ordemSelecao = ordemSelecao.filter(item => item !== produtoAlvoQuantidade.gemco);
+}
 window.fecharModal('modalQuantidade');
 window.filtrarProdutos();
 };
 
 window.limparSelecoesComConfirmacao = function() {
-if (Object.keys(carrinhoSelecionados).length === 0) {
+if (ordemSelecao.length === 0) {
 alert("Nenhum item está selecionado.");
 return;
 }
 if (confirm("Desmarcar todos os itens selecionados?")) {
 carrinhoSelecionados = {};
+ordemSelecao = [];
 window.filtrarProdutos();
 }
 };
@@ -750,7 +771,7 @@ p.gemco.toLowerCase().includes(termo) ||
 p.referencia.toLowerCase().includes(termo) ||
 (p.codigoBarras && p.codigoBarras.includes(termo))
 );
-document.getElementById("lblTituloCatalogo").innerText = Resultados:${filtrados.length} itens`;
+document.getElementById("lblTituloCatalogo").innerText = "Resultados: " + filtrados.length + " itens";
 renderizarListaProdutos(filtrados);
 };
 
@@ -758,16 +779,17 @@ function atualizarPainelLateralSelecionados() {
 const container = document.getElementById("listaSelecionadosPainel");
 container.innerHTML = "";
 
-const chaves = Object.keys(carrinhoSelecionados);
-const totalEtiquetas = Object.values(carrinhoSelecionados).reduce((a, b) => a + b, 0);
+const valores = Object.values(carrinhoSelecionados);
+let totalEtiquetas = 0;
+for (let v = 0; v < valores.length; v++) { totalEtiquetas += valores[v]; }
 document.getElementById("txtTotalSelecionadoRodape").innerText = totalEtiquetas;
 
-if (chaves.length === 0) {
-container.innerHTML = <div class="text-center text-gray-500 text-xs py-8"&gt;Nenhuma etiqueta selecionada.&lt;/div>;
+if (ordemSelecao.length === 0) {
+container.innerHTML = '<div class="text-center text-gray-500 text-xs py-8">Nenhuma etiqueta selecionada.</div>';
 return;
 }
 
-chaves.forEach(gemco => {
+ordemSelecao.forEach(gemco => {
 const qtd = carrinhoSelecionados[gemco];
 const prod = todosProdutos.find(p => p.gemco === gemco);
 if (!prod) return;
@@ -779,8 +801,14 @@ card.addEventListener("dblclick", () => {
 dispararPopupQuantidade(prod);
 });
 
+let txtEan = prod.codigoBarras || 'Sem Barras';
+
 card.innerHTML = &lt;div class="flex justify-between items-start gap-2"&gt; &lt;div class="font-bold text-white text-xs truncate max-w-[180px]"&gt;${prod.nome.toUpperCase()}</div>
-<button onclick="event.stopPropagation(); window.removerItemPainel('${gemco}')" class="text-red-400 hover:text-red-300 p-1 transition flex-shrink-0" title="Remover item"&gt; &lt;i class="fas fa-trash-alt"&gt;&lt;/i&gt; &lt;/button&gt; &lt;/div&gt; &lt;div class="text-green-200 font-mono text-[10px] leading-relaxed"&gt; GEMCO: &lt;span class="font-semibold"&gt;${prod.gemco}</span> | EAN: <span class="font-semibold">${prod.codigoBarras || 'Sem Barras'}&lt;/span&gt; | REF: &lt;span class="font-semibold"&gt;${prod.referencia}</span>
+<button onclick="event.stopPropagation(); window.removerItemPainel('
+
+{prod.gemco}</span> | EAN: <span class="font-semibold">
+
+{prod.referencia}</span>
 </div>
 <div class="flex justify-between items-center mt-1 pt-1 border-t border-green-900/60 text-[11px]">
 <span class="bg-green-900 text-green-200 font-bold px-2 py-0.5 rounded border border-green-700">🔖 ${qtd}x&lt;/span&gt; &lt;span class="text-[10px] text-gray-400 italic"&gt;2x clique p/ editar&lt;/span&gt; &lt;/div&gt;;
@@ -813,7 +841,7 @@ return null;
 }
 
 window.gerarPDFEtiquetas = function() {
-const { jsPDF } = window.jspdf;
+const jsPDF = window.jspdf.jsPDF;
 const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
 const margemEsquerda = 22.67, margemDireita = 25.51, margemTopo = 19.84, margemBaixo = 17.01;
 const gapMedio = 5.67, gapPequeno = 2.835, colunas = 4, linhas = 13, totalPorPagina = colunas * linhas;
@@ -821,7 +849,7 @@ const larguraQuadrante = (595.28 - (margemEsquerda + margemDireita)) / colunas;
 const alturaQuadrante = (841.89 - (margemTopo + margemBaixo)) / linhas;
 let filaImpressao = [];
 
-Object.keys(carrinhoSelecionados).forEach(gemcoKey => {
+ordemSelecao.forEach(gemcoKey => {
 const qtd = carrinhoSelecionados[gemcoKey];
 const itemRef = todosProdutos.find(p => p.gemco === gemcoKey);
 if (itemRef) { for (let r = 0; r < qtd; r++) { filaImpressao.push(itemRef); } }
@@ -860,7 +888,7 @@ doc.text(codigoLimpo, inicioX + (larguraQuadrante / 2), by + bh + 7, { align: 'c
 });
 
 const produtosDoLote = [];
-Object.keys(carrinhoSelecionados).forEach(gemcoKey => {
+ordemSelecao.forEach(gemcoKey => {
 produtosDoLote.push({ gemco: gemcoKey, qtd: carrinhoSelecionados[gemcoKey] });
 });
 
@@ -886,14 +914,24 @@ const h = child.val();
 const dadosStringificados = encodeURIComponent(JSON.stringify(h.itens || []));
 const tr = document.createElement("tr");
 tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
+
+let btnAdmin = "";
+if (dadosUsuarioLogado.perfil === 'administrador') {
+btnAdmin = '<button onclick="window.excluirRegistroHistorico('' + idLote + '')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1"><i class="fas fa-trash-alt"></i></button>';
+}
+
 tr.innerHTML = &lt;td class="p-3 font-semibold text-green-400"&gt;@${h.operador}</td>
-<td class="p-3 text-xs text-gray-400">${h.data}&lt;/td&gt; &lt;td class="p-3"&gt;&lt;span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900"&gt;${h.total} itens</span></td>
+<td class="p-3 text-xs text-gray-400">
+{h.total} itens</span></td>
 <td class="p-3 text-right flex items-center justify-end gap-3">
-<button onclick="window.reimprimirLoteHistorico('${dadosStringificados}')" class="text-green-400 hover:text-green-300 font-medium text-xs"&gt;&lt;i class="fas fa-print"&gt;&lt;/i&gt; Imprimir&lt;/button&gt; ${dadosUsuarioLogado.perfil === 'administrador' ? <button onclick="window.excluirRegistroHistorico('${idLote}')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1"><i class="fas fa-trash-alt"></i></button>: ''} &lt;/td>;
+<button onclick="window.reimprimirLoteHistorico('
+
+{btnAdmin}
+</td>`;
 corpo.insertBefore(tr, corpo.firstChild);
 });
 } else {
-corpo.innerHTML = <tr&gt;&lt;td colspan="4" class="p-4 text-center text-gray-500"&gt;Nenhum registro encontrado.&lt;/td&gt;&lt;/tr>;
+corpo.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>';
 }
 }, { onlyOnce: true });
 window.abrirModal('modalHistorico');
@@ -909,7 +947,7 @@ if (produtoOriginal) { for (let r = 0; r < loteItem.qtd; r++) { filaReimpressao.
 });
 if (filaReimpressao.length === 0) return alert("Produtos deste lote não localizados no catálogo atual.");
 
-const { jsPDF } = window.jspdf;
+const jsPDF = window.jspdf.jsPDF;
 const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
 const margemEsquerda = 22.67, margemDireita = 25.51, margemTopo = 19.84, margemBaixo = 17.01;
 const gapMedio = 5.67, gapPequeno = 2.835, colunas = 4, linhas = 13, totalPorPagina = colunas * linhas;
@@ -957,3 +995,4 @@ remove(ref(db, 'historico_etiquetas/' + idLote));
 </script>
 </body>
 </html>
+Exibindo Agora vai.txt.
