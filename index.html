@@ -687,7 +687,7 @@
                 ordemSelecao = ordemSelecao.filter(g => g !== gemco);
             } else {
                 carrinhoSelecionados[gemco] = padraoQtd;
-                if (!ordemSelecao.includes(gemco)) ordemSelecao.push(gemco);
+                if (!ordemSelecao.includes(gemco)) ordemSelecao.unshift(gemco);
             }
             window.filtrarProdutos();
         };
@@ -695,7 +695,7 @@
         window.alternarSelecaoItemManual = function(gemco, checado) {
             if (checado) {
                 carrinhoSelecionados[gemco] = 1;
-                if (!ordemSelecao.includes(gemco)) ordemSelecao.push(gemco);
+                if (!ordemSelecao.includes(gemco)) ordemSelecao.unshift(gemco);
             } else {
                 delete carrinhoSelecionados[gemco];
                 ordemSelecao = ordemSelecao.filter(g => g !== gemco);
@@ -731,7 +731,7 @@
             const valor = parseInt(document.getElementById("inputQtdValor").value) || 0;
             if (valor > 0 && produtoAlvoQuantidade) {
                 carrinhoSelecionados[produtoAlvoQuantidade.gemco] = valor;
-                if (!ordemSelecao.includes(produtoAlvoQuantidade.gemco)) ordemSelecao.push(produtoAlvoQuantidade.gemco);
+                if (!ordemSelecao.includes(produtoAlvoQuantidade.gemco)) ordemSelecao.unshift(produtoAlvoQuantidade.gemco);
             } else if (produtoAlvoQuantidade) {
                 delete carrinhoSelecionados[produtoAlvoQuantidade.gemco];
                 ordemSelecao = ordemSelecao.filter(g => g !== produtoAlvoQuantidade.gemco);
