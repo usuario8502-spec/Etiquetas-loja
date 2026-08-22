@@ -324,6 +324,7 @@
 
         let todosProdutos = [];
         let carrinhoSelecionados = {};
+        let ordemSelecao = []; // Nova fila para manter a ordem exata de seleção
         let dadosUsuarioLogado = { username: "Administrador", perfil: "executor" };
         let produtoAlvoQuantidade = null;
 
@@ -568,6 +569,7 @@
             if (confirm("🚨 ATENÇÃO CRÍTICA: Deseja redefinir completamente o catálogo de etiquetas?")) {
                 remove(ref(db, 'catalogo_etiquetas')).then(() => {
                     carrinhoSelecionados = {};
+                    ordemSelecao = [];
                     alert("Catálogo limpo.");
                     carregarBancoDadosCompleto();
                 }).catch(err => alert("Erro: " + err.message));
@@ -680,14 +682,24 @@
         };
 
         window.alternarSelecaoItem = function(gemco, padraoQtd) {
-            if (carrinhoSelecionados[gemco] > 0) delete carrinhoSelecionados[gemco];
-            else carrinhoSelecionados[gemco] = padraoQtd;
+            if (carrinhoSelecionados[gemco] > 0) {
+                delete carrinhoSelecionados[gemco];
+                ordemSelecao = ordemSelecao.filter(g => g !== gemco);
+            } else {
+                carrinhoSelecionados[gemco] = padraoQtd;
+                if (!ordemSelecao.includes(gemco)) ordemSelecao.push(gemco);
+            }
             window.filtrarProdutos();
         };
 
         window.alternarSelecaoItemManual = function(gemco, checado) {
-            if (checado) carrinhoSelecionados[gemco] = 1;
-            else delete carrinhoSelecionados[gemco];
+            if (checado) {
+                carrinhoSelecionados[gemco] = 1;
+                if (!ordemSelecao.includes(gemco)) ordemSelecao.push(gemco);
+            } else {
+                delete carrinhoSelecionados[gemco];
+                ordemSelecao = ordemSelecao.filter(g => g !== gemco);
+            }
             window.filtrarProdutos();
         };
 
@@ -697,6 +709,7 @@
             
             if (confirm(`Deseja realmente remover "${nomeProd.toUpperCase()}" dos selecionados?`)) {
                 delete carrinhoSelecionados[gemco];
+                ordemSelecao = ordemSelecao.filter(g => g !== gemco);
                 window.filtrarProdutos();
             }
         };
@@ -716,8 +729,13 @@
 
         window.confirmarQuantidade = function() {
             const valor = parseInt(document.getElementById("inputQtdValor").value) || 0;
-            if (valor > 0 && produtoAlvoQuantidade) carrinhoSelecionados[produtoAlvoQuantidade.gemco] = valor;
-            else if (produtoAlvoQuantidade) delete carrinhoSelecionados[produtoAlvoQuantidade.gemco];
+            if (valor > 0 && produtoAlvoQuantidade) {
+                carrinhoSelecionados[produtoAlvoQuantidade.gemco] = valor;
+                if (!ordemSelecao.includes(produtoAlvoQuantidade.gemco)) ordemSelecao.push(produtoAlvoQuantidade.gemco);
+            } else if (produtoAlvoQuantidade) {
+                delete carrinhoSelecionados[produtoAlvoQuantidade.gemco];
+                ordemSelecao = ordemSelecao.filter(g => g !== produtoAlvoQuantidade.gemco);
+            }
             window.fecharModal('modalQuantidade');
             window.filtrarProdutos();
         };
@@ -729,6 +747,7 @@
             }
             if (confirm("Desmarcar todos os itens selecionados?")) {
                 carrinhoSelecionados = {};
+                ordemSelecao = [];
                 window.filtrarProdutos();
             }
         };
@@ -754,16 +773,16 @@
             const container = document.getElementById("listaSelecionadosPainel");
             container.innerHTML = "";
 
-            const chaves = Object.keys(carrinhoSelecionados);
             const totalEtiquetas = Object.values(carrinhoSelecionados).reduce((a, b) => a + b, 0);
             document.getElementById("txtTotalSelecionadoRodape").innerText = totalEtiquetas;
 
-            if (chaves.length === 0) {
+            if (ordemSelecao.length === 0) {
                 container.innerHTML = `<div class="text-center text-gray-500 text-xs py-8">Nenhuma etiqueta selecionada.</div>`;
                 return;
             }
 
-            chaves.forEach(gemco => {
+            // Usando a array 'ordemSelecao' no lugar de ler as chaves soltas do carrinho
+            ordemSelecao.forEach(gemco => {
                 const qtd = carrinhoSelecionados[gemco];
                 const prod = todosProdutos.find(p => p.gemco === gemco);
                 if (!prod) return;
@@ -827,7 +846,8 @@
             const alturaQuadrante = (841.89 - (margemTopo + margemBaixo)) / linhas;
             let filaImpressao = [];
 
-            Object.keys(carrinhoSelecionados).forEach(gemcoKey => {
+            // A fila de impressão também obedece à ordem exata
+            ordemSelecao.forEach(gemcoKey => {
                 const qtd = carrinhoSelecionados[gemcoKey];
                 const itemRef = todosProdutos.find(p => p.gemco === gemcoKey);
                 if (itemRef) { for (let r = 0; r < qtd; r++) { filaImpressao.push(itemRef); } }
@@ -866,7 +886,7 @@
             });
 
             const produtosDoLote = [];
-            Object.keys(carrinhoSelecionados).forEach(gemcoKey => {
+            ordemSelecao.forEach(gemcoKey => {
                 produtosDoLote.push({ gemco: gemcoKey, qtd: carrinhoSelecionados[gemcoKey] });
             });
 
