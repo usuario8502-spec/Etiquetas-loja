@@ -273,7 +273,7 @@
     <!-- MODAL HISTÓRICO -->
     <div id="modalHistorico" class="fixed inset-0 bg-black/70 popup-blur hidden items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
-            <h3 class="text-xl font-bold mb-4 text-white flex items-center gap-2"><i class="fas fa-history text-blue-500"></i> Histórico</h3>
+            <h3 class="text-xl font-bold mb-4 text-white flex items-center gap-2"><i class="fas fa-history text-blue-500"></i> Histórico (Últimas 48 Horas)</h3>
             <div class="overflow-y-auto flex-1 border border-gray-700 rounded-lg bg-gray-850 custom-scrollbar">
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
@@ -691,7 +691,10 @@
             }
             window.filtrarProdutos();
             const inputBusca = document.getElementById("inputBusca");
-            if (inputBusca) inputBusca.select();
+            if (inputBusca) {
+                inputBusca.focus();
+                inputBusca.select();
+            }
         };
 
         window.alternarSelecaoItemManual = function(gemco, checado) {
@@ -704,7 +707,10 @@
             }
             window.filtrarProdutos();
             const inputBusca = document.getElementById("inputBusca");
-            if (inputBusca) inputBusca.select();
+            if (inputBusca) {
+                inputBusca.focus();
+                inputBusca.select();
+            }
         };
 
         window.removerItemPainel = function(gemco) {
@@ -743,7 +749,10 @@
             window.fecharModal('modalQuantidade');
             window.filtrarProdutos();
             const inputBusca = document.getElementById("inputBusca");
-            if (inputBusca) inputBusca.select();
+            if (inputBusca) {
+                inputBusca.focus();
+                inputBusca.select();
+            }
         };
 
         window.limparSelecoesComConfirmacao = function() {
@@ -896,6 +905,7 @@
 
             const dadosHistorico = {
                 operador: dadosUsuarioLogado.username,
+                timestamp: Date.now(),
                 data: new Date().toLocaleString("pt-BR"),
                 total: filaImpressao.length,
                 itens: produtosDoLote
@@ -909,10 +919,30 @@
             onValue(ref(db, 'historico_etiquetas'), (snapshot) => {
                 const corpo = document.getElementById("tabelaHistoricoCorpo");
                 corpo.innerHTML = "";
+                let registrosEncontrados = 0;
+                const agora = Date.now();
+                const limite48HorasMs = 48 * 60 * 60 * 1000;
+
                 if (snapshot.exists()) {
                     snapshot.forEach(child => {
                         const idLote = child.key;
                         const h = child.val();
+                        
+                        // Validação de retenção de 48 horas (baseada no timestamp de criação)
+                        const tempoCriacao = h.timestamp || 0;
+                        if ((agora - tempoCriacao) > limite48HorasMs) {
+                            return; // Ignora registros com mais de 48 horas
+                        }
+
+                        // Validação de acesso: Usuário comum vê apenas o seu; Administrador vê todos
+                        const usuarioLogadoNome = (dadosUsuarioLogado.username || "").trim().toLowerCase();
+                        const operadorRegistro = (h.operador || "").trim().toLowerCase();
+
+                        if (dadosUsuarioLogado.perfil !== 'administrador' && operadorRegistro !== usuarioLogadoNome) {
+                            return; // Usuário comum não exibe histórico de outros
+                        }
+
+                        registrosEncontrados++;
                         const dadosStringificados = encodeURIComponent(JSON.stringify(h.itens || []));
                         const tr = document.createElement("tr");
                         tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
@@ -926,8 +956,10 @@
                             </td>`;
                         corpo.insertBefore(tr, corpo.firstChild);
                     });
-                } else {
-                    corpo.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>`;
+                }
+
+                if (registrosEncontrados === 0) {
+                    corpo.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhum registro nas últimas 48 horas.</td></tr>`;
                 }
             }, { onlyOnce: true });
             window.abrirModal('modalHistorico');
@@ -991,4 +1023,3 @@
     </script>
 </body>
 </html>
-         
