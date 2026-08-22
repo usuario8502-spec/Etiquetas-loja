@@ -911,7 +911,7 @@
             };
 
             // Salvando no Firebase garantindo a persistência antes de abrir o PDF
-            push(ref(db, 'historico_etiquetas'), dadosHistorico)
+            push(ref(db, 'historico_etiquetas/' + auth.currentUser.uid), dadosHistorico)
                 .then(() => {
                     window.open(doc.output('bloburl'), '_blank');
                 })
