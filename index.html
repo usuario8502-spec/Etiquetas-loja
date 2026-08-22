@@ -904,7 +904,7 @@
             });
 
             const dadosHistorico = {
-                operador: dadosUsuarioLogado.username,
+                operador: dadosUsuarioLogado.username || "admin",
                 timestamp: Date.now(),
                 data: new Date().toLocaleString("pt-BR"),
                 total: filaImpressao.length,
@@ -928,18 +928,19 @@
                         const idLote = child.key;
                         const h = child.val();
                         
-                        // Validação de retenção de 48 horas (baseada no timestamp de criação)
                         const tempoCriacao = h.timestamp || 0;
-                        if ((agora - tempoCriacao) > limite48HorasMs) {
-                            return; // Ignora registros com mais de 48 horas
+                        // Se o timestamp for inválido/futuro, ignoramos a trava estrita de 48h para garantir exibição
+                        if (tempoCriacao > 0 && tempoCriacao <= agora) {
+                            if ((agora - tempoCriacao) > limite48HorasMs) {
+                                return; // Mais de 48 horas
+                            }
                         }
 
-                        // Validação de acesso: Usuário comum vê apenas o seu; Administrador vê todos
                         const usuarioLogadoNome = (dadosUsuarioLogado.username || "").trim().toLowerCase();
                         const operadorRegistro = (h.operador || "").trim().toLowerCase();
 
                         if (dadosUsuarioLogado.perfil !== 'administrador' && operadorRegistro !== usuarioLogadoNome) {
-                            return; // Usuário comum não exibe histórico de outros
+                            return; 
                         }
 
                         registrosEncontrados++;
@@ -947,7 +948,7 @@
                         const tr = document.createElement("tr");
                         tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
                         tr.innerHTML = `
-                            <td class="p-3 font-semibold text-green-400">@${h.operador}</td>
+                            <td class="p-3 font-semibold text-green-400">@${h.operador || 'admin'}</td>
                             <td class="p-3 text-xs text-gray-400">${h.data}</td>
                             <td class="p-3"><span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900">${h.total} itens</span></td>
                             <td class="p-3 text-right flex items-center justify-end gap-3">
