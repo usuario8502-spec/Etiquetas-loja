@@ -324,7 +324,7 @@
 
         let todosProdutos = [];
         let carrinhoSelecionados = {};
-        let ordemSelecao = []; // Nova fila para manter a ordem exata de seleção
+        let ordemSelecao = []; 
         let dadosUsuarioLogado = { username: "Administrador", perfil: "executor" };
         let produtoAlvoQuantidade = null;
 
@@ -690,6 +690,8 @@
                 if (!ordemSelecao.includes(gemco)) ordemSelecao.unshift(gemco);
             }
             window.filtrarProdutos();
+            const inputBusca = document.getElementById("inputBusca");
+            if (inputBusca) inputBusca.select();
         };
 
         window.alternarSelecaoItemManual = function(gemco, checado) {
@@ -701,6 +703,8 @@
                 ordemSelecao = ordemSelecao.filter(g => g !== gemco);
             }
             window.filtrarProdutos();
+            const inputBusca = document.getElementById("inputBusca");
+            if (inputBusca) inputBusca.select();
         };
 
         window.removerItemPainel = function(gemco) {
@@ -738,6 +742,8 @@
             }
             window.fecharModal('modalQuantidade');
             window.filtrarProdutos();
+            const inputBusca = document.getElementById("inputBusca");
+            if (inputBusca) inputBusca.select();
         };
 
         window.limparSelecoesComConfirmacao = function() {
@@ -781,7 +787,6 @@
                 return;
             }
 
-            // Usando a array 'ordemSelecao' no lugar de ler as chaves soltas do carrinho
             ordemSelecao.forEach(gemco => {
                 const qtd = carrinhoSelecionados[gemco];
                 const prod = todosProdutos.find(p => p.gemco === gemco);
@@ -846,7 +851,6 @@
             const alturaQuadrante = (841.89 - (margemTopo + margemBaixo)) / linhas;
             let filaImpressao = [];
 
-            // A fila de impressão também obedece à ordem exata
             ordemSelecao.forEach(gemcoKey => {
                 const qtd = carrinhoSelecionados[gemcoKey];
                 const itemRef = todosProdutos.find(p => p.gemco === gemcoKey);
@@ -987,3 +991,4 @@
     </script>
 </body>
 </html>
+         
