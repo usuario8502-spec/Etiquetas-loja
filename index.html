@@ -930,37 +930,41 @@
                 const limite48HorasMs = 48 * 60 * 60 * 1000;
 
                 if (snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const idLote = child.key;
-                        const h = child.val();
+                    snapshot.forEach(userSnapshot => {
+                        const uidNode = userSnapshot.key;
                         
-                        const tempoCriacao = h.timestamp || 0;
-                        if (tempoCriacao > 0) {
-                            if ((agora - tempoCriacao) > limite48HorasMs) {
-                                return; // Mais de 48 horas
+                        userSnapshot.forEach(child => {
+                            const idLote = child.key;
+                            const h = child.val();
+                            
+                            const tempoCriacao = h.timestamp || 0;
+                            if (tempoCriacao > 0) {
+                                if ((agora - tempoCriacao) > limite48HorasMs) {
+                                    return; // Mais de 48 horas
+                                }
                             }
-                        }
 
-                        const usuarioLogadoNome = (dadosUsuarioLogado.username || "").trim().toLowerCase();
-                        const operadorRegistro = (h.operador || "").trim().toLowerCase();
+                            const usuarioLogadoNome = (dadosUsuarioLogado.username || "").trim().toLowerCase();
+                            const operadorRegistro = (h.operador || "").trim().toLowerCase();
 
-                        if (dadosUsuarioLogado.perfil !== 'administrador' && operadorRegistro !== usuarioLogadoNome) {
-                            return; 
-                        }
+                            if (dadosUsuarioLogado.perfil !== 'administrador' && operadorRegistro !== usuarioLogadoNome) {
+                                return; 
+                            }
 
-                        registrosEncontrados++;
-                        const dadosStringificados = encodeURIComponent(JSON.stringify(h.itens || []));
-                        const tr = document.createElement("tr");
-                        tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
-                        tr.innerHTML = `
-                            <td class="p-3 font-semibold text-green-400">@${h.operador || 'admin'}</td>
-                            <td class="p-3 text-xs text-gray-400">${h.data}</td>
-                            <td class="p-3"><span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900">${h.total} itens</span></td>
-                            <td class="p-3 text-right flex items-center justify-end gap-3">
-                                <button onclick="window.reimprimirLoteHistorico('${dadosStringificados}')" class="text-green-400 hover:text-green-300 font-medium text-xs"><i class="fas fa-print"></i> Imprimir</button>
-                                ${dadosUsuarioLogado.perfil === 'administrador' ? `<button onclick="window.excluirRegistroHistorico('${idLote}')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1"><i class="fas fa-trash-alt"></i></button>` : ''}
-                            </td>`;
-                        corpo.insertBefore(tr, corpo.firstChild);
+                            registrosEncontrados++;
+                            const dadosStringificados = encodeURIComponent(JSON.stringify(h.itens || []));
+                            const tr = document.createElement("tr");
+                            tr.className = "hover:bg-gray-700/30 transition text-gray-300 border-b border-gray-700/50";
+                            tr.innerHTML = `
+                                <td class="p-3 font-semibold text-green-400">@${h.operador || 'admin'}</td>
+                                <td class="p-3 text-xs text-gray-400">${h.data}</td>
+                                <td class="p-3"><span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-900">${h.total} itens</span></td>
+                                <td class="p-3 text-right flex items-center justify-end gap-3">
+                                    <button onclick="window.reimprimirLoteHistorico('${dadosStringificados}')" class="text-green-400 hover:text-green-300 font-medium text-xs"><i class="fas fa-print"></i> Imprimir</button>
+                                    ${dadosUsuarioLogado.perfil === 'administrador' ? `<button onclick="window.excluirRegistroHistorico('${uidNode}', '${idLote}')" class="text-gray-500 hover:text-red-400 p-1 transition ml-1"><i class="fas fa-trash-alt"></i></button>` : ''}
+                                </td>`;
+                            corpo.insertBefore(tr, corpo.firstChild);
+                        });
                     });
                 }
 
@@ -1024,9 +1028,9 @@
             } catch (err) { alert("Erro ao processar reimpressão: " + err.message); }
         };
 
-        window.excluirRegistroHistorico = function(idLote) {
+        window.excluirRegistroHistorico = function(uidNode, idLote) {
             if (confirm("Excluir este registro do histórico?")) {
-                remove(ref(db, 'historico_etiquetas/' + idLote)).then(() => {
+                remove(ref(db, 'historico_etiquetas/' + uidNode + '/' + idLote)).then(() => {
                     window.abrirHistorico();
                 });
             }
